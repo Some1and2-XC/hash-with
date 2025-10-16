@@ -1,4 +1,4 @@
-# HashWith
+# 🦀HashWith🦀
 
 `HashWith` is a Rust procedural macro crate that allows you to automatically implement `Hash` for structs, overriding fields that don’t natively implement `Hash` (like `f64` or structs which use them). It supports custom hash functions per field.
 
