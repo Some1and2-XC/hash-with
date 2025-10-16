@@ -2,6 +2,10 @@
 name = "hash_with"
 version = "0.1.0"
 edition = "2024"
+authors = ["Some1and2 <mkpt00@gmail.com>"]
+description = "A procedural macro for deriving `Hash` on structs with custom field logic."
+license = "MIT"
+repository = "https://github.com/some1and2-xc/hash-with"
 
 [lib]
 proc-macro = true
