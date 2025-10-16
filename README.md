@@ -8,15 +8,6 @@
 - Support for custom hash functions per field via the `#[hash_with = "..."]` attribute.
 - Inline closures for per-field hashing.
 
-## Installation
-
-Add this to your `Cargo.toml`:
-
-```toml
-[dependencies]
-hash_with = { git = "https://github.com/some1and2-xc/hash-with" }
-```
-
 ## Usage
 
 ### Basic Inline Hash Expression
@@ -87,3 +78,11 @@ assert_eq!(user1.get_hash(), user2.get_hash());
  - Simplifies implementing `Hash` for structs with attributes from external or third-party types that you cannot modify.
  - Lets you ignore irrelevant fields without implementing Hash manually.
 
+## Installation
+
+Add this to your `Cargo.toml`:
+
+```toml
+[dependencies]
+hash_with = { git = "https://github.com/some1and2-xc/hash-with" }
+```
