@@ -2,13 +2,13 @@
 [![Crates.io](https://img.shields.io/crates/v/hash_with.svg)](https://crates.io/crates/hash_with)
 [![Documentation](https://docs.rs/hash_with/badge.svg)](https://docs.rs/hash_with)
 
-`HashWith` is a Rust procedural macro crate that allows you to automatically implement `Hash` for structs, overriding fields that don’t natively implement `Hash` (like `f64` or structs which use them). It supports custom hash functions per field.
+`HashWith` is a Rust procedural macro crate that allows you to automatically implement `Hash` for structs, allowing the programmer to override fields that don’t natively implement `Hash`.
 
 ## Features
 
 - Derive `Hash` on structs with fields that normally cannot be hashed.
+- Inline closures for per-field hashing via the `#[hash_with(...)]` attribute.
 - Support for custom hash functions per field via the `#[hash_with = "..."]` attribute.
-- Inline closures for per-field hashing.
 
 ## Usage
 
@@ -28,7 +28,15 @@ struct Brightness {
 let b1 = Brightness { inner: 1.1 };
 let b2 = Brightness { inner: 2.2 };
 
-assert_ne!(b1.get_hash(), b2.get_hash());
+fn get_hash<T: std::hash::Hash>(value: &T) -> u64 {
+    use std::hash::{Hasher, DefaultHasher};
+    let mut hasher = DefaultHasher::new();
+    value.hash(&mut hasher);
+    return hasher.finish();
+}
+
+// Both values are different.
+assert_ne!(get_hash(&b1), get_hash(b2));
 ```
 
 ## Custom Hash Function
@@ -72,7 +80,7 @@ let user1 = User { id: 1, session_token: "abc".into() };
 let user2 = User { id: 1, session_token: "xyz".into() };
 
 // The hash ignores `session_token`
-assert_eq!(user1.get_hash(), user2.get_hash());
+assert_eq!(get_hash(&user1), get_hash(&user2));
 ```
 
 # Why Use `hash_with`?
@@ -82,9 +90,20 @@ assert_eq!(user1.get_hash(), user2.get_hash());
 
 ## Installation
 
-Add this to your `Cargo.toml`:
+### From Shell
+```sh
+cargo add hash-with
+```
 
+### Within your `Cargo.toml`
 ```toml
 [dependencies]
+
+# From Github
 hash_with = { git = "https://github.com/some1and2-xc/hash-with" }
+
+# OR
+
+# From Crates.io
+hash_with = "0.1.0"
 ```

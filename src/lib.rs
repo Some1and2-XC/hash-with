@@ -6,8 +6,8 @@
 //!
 //! ## Inline Example
 //!
-//! The `#[hash_with(expr)]` notation takes in some expression and so long as the result is a type that
-//! implements [`Hash`]. For example if you wanted to serialize a [`f64`] in your struct you can use
+//! The `#[hash_with(expr)]` notation takes in some expression so long as the result is a type that
+//! implements [`Hash`. For example if you wanted to serialize a [`f64`] in your struct you can use
 //! the following snippet.
 //!
 //! ```rust
@@ -22,25 +22,24 @@
 //!     inner: f64,
 //! }
 //!
-//! # use std::hash::{Hash, Hasher, DefaultHasher};
-//! # impl Brightness {
-//! #     fn get_hash(&self) -> u64 {
-//! #         let mut hasher = DefaultHasher::new();
-//! #         self.hash(&mut hasher);
-//! #         return hasher.finish();
-//! #     }
-//! # }
-//! #
 //! // Sets values
 //! let b1 = Brightness { inner: 1.1 };
 //! let b2 = Brightness { inner: 2.2 };
 //!
+//! /// Function for getting the hash of a value which implements hash.
+//! fn get_hash<T: std::hash::Hash>(value: &T) -> u64 {
+//!     use std::hash::{Hasher, DefaultHasher};
+//!     let mut hasher = DefaultHasher::new();
+//!     value.hash(&mut hasher);
+//!     return hasher.finish();
+//! }
+//!
 //! // Not equal in terms of their hash
-//! assert_ne!(b1.get_hash(), b2.get_hash());
+//! assert_ne!(get_hash(&b1), get_hash(&b2));
 //! ```
 //!
 //! ## Function Call Example
-//! With [`HashWith`] you can also call functions by name for the [`Hash`] implementation. This can
+//! With [`HashWith`], you can also call functions by name for the [`Hash`] implementation of attributes. This can
 //! be useful for repeatedly creating a [`Hash`] implementation for multiple of the same datatype
 //! in a struct.
 //!
@@ -83,75 +82,125 @@
 //!     session_token: String,
 //! }
 //!
-//! # use std::hash::{Hash, Hasher, DefaultHasher};
-//! # impl User {
-//! #     fn get_hash(&self) -> u64 {
-//! #         let mut hasher = DefaultHasher::new();
-//! #         self.hash(&mut hasher);
-//! #         return hasher.finish();
-//! #     }
-//! # }
-//! #
 //! let user_1 = User { id: 1, session_token: "abc".into() };
 //! let user_2 = User { id: 1, session_token: "xyz".into() };
+//! let user_3 = User { id: 2, session_token: "ijk".into() };
 //!
-//! // The hash ignores `session_token`, so these are equal in terms of hash.
-//! assert_eq!(user_1.get_hash(), user_2.get_hash());
+//! # /// Function for getting the hash of a value which implements hash.
+//! # fn get_hash<T: std::hash::Hash>(value: &T) -> u64 {
+//! #     use std::hash::{Hasher, DefaultHasher};
+//! #     let mut hasher = DefaultHasher::new();
+//! #     value.hash(&mut hasher);
+//! #     return hasher.finish();
+//! # }
+//! #
+//! // The hash ignores [`User::session_token`], so these are equal in terms of hash.
+//! assert_eq!(get_hash(&user_1), get_hash(&user_2));
+//! // The [`User::id`] attribute still gets used
+//! assert_ne!(get_hash(&user_1), get_hash(&user_3));
+//! ```
+//!
+//! ## Hash implementation with Block Notation Example
+//!
+//! Block notation can also be used to calculate the hash of an attribute. The following is an
+//! example of doing do.
+//!
+//! ```rust
+//! # use hash_with::HashWith;
+//! #
+//! #[derive(HashWith)]
+//! struct SomeBadStruct {
+//!     #[hash_with({
+//!         // Gets intermediary value
+//!         let value = self.number.parse::<i32>().unwrap_or(-1);
+//!         // Adds 5 to the number
+//!         value + 5
+//!     })]
+//!     number: String,
+//! }
+//!
+//! let v1 = SomeBadStruct { number: "number".to_string(), };
+//! let v2 = SomeBadStruct { number: "67".to_string(), };
+//!
+//! # /// Function for getting the hash of a value which implements hash.
+//! # fn get_hash<T: std::hash::Hash>(value: &T) -> u64 {
+//! #     use std::hash::{Hasher, DefaultHasher};
+//! #     let mut hasher = DefaultHasher::new();
+//! #     value.hash(&mut hasher);
+//! #     return hasher.finish();
+//! # }
+//! #
+//! // Values aren't equal because the number gets parsed and converted differently.
+//! assert_ne!(get_hash(&v1), get_hash(&v2));
+//!
 //! ```
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{parse_macro_input, parse_str, Data, DeriveInput, Expr, Fields, Lit, Meta, MetaList, MetaNameValue};
 
-/// Derives [`Hash`] implementations for the attributes of struct, using custom per-field hash functions when needed.
+/// # HashWith
 ///
-/// This function is intended to be used on structs where some fields do not implement
-/// [`std::hash::Hash`] by default (for example, [`f64`]). This implements the `#[hash_with(...)]`
-/// macro on struct fields, allowing either an inline expression or a named function
-/// to define how the field is hashed.
+/// `HashWith` is a procedural macro for deriving [`Hash`] on structs that contain
+/// fields which do not implement [`Hash`] by default (like [`f64`]).
+/// It supports custom hash functions per field.
 ///
-/// # Inline Expression Example
+/// ## Inline Example
+///
+/// The `#[hash_with(expr)]` notation takes in some expression so long as the result is a type that
+/// implements [`Hash`. For example if you wanted to serialize a [`f64`] in your struct you can use
+/// the following snippet.
 ///
 /// ```rust
 /// use hash_with::HashWith;
 ///
+/// /// Some struct which needs to implement [`Hash`]
 /// #[derive(HashWith)]
 /// struct Brightness {
-///     /// Use a custom hash expression for this field.
+///     /// The inner value with a hash function override.
+///     /// The `f64::to_bits()` method returns a `u64` which is why it can be used here.
 ///     #[hash_with(self.inner.to_bits())]
 ///     inner: f64,
 /// }
 ///
-/// # use std::hash::{Hash, Hasher, DefaultHasher};
-/// # impl Brightness {
-/// #     fn get_hash(&self) -> u64 {
-/// #         let mut hasher = DefaultHasher::new();
-/// #         self.hash(&mut hasher);
-/// #         return hasher.finish();
-/// #     }
-/// # }
-/// #
+/// // Sets values
 /// let b1 = Brightness { inner: 1.1 };
 /// let b2 = Brightness { inner: 2.2 };
 ///
-/// assert_ne!(b1.get_hash(), b2.get_hash());
+/// /// Function for getting the hash of a value which implements hash.
+/// fn get_hash<T: std::hash::Hash>(value: &T) -> u64 {
+///     use std::hash::{Hasher, DefaultHasher};
+///     let mut hasher = DefaultHasher::new();
+///     value.hash(&mut hasher);
+///     return hasher.finish();
+/// }
+///
+/// // Not equal in terms of their hash
+/// assert_ne!(get_hash(&b1), get_hash(&b2));
 /// ```
 ///
-/// # Function Call Example
+/// ## Function Call Example
+/// With [`HashWith`], you can also call functions by name for the [`Hash`] implementation of attributes. This can
+/// be useful for repeatedly creating a [`Hash`] implementation for multiple of the same datatype
+/// in a struct.
+///
+/// The function must however have the signature `Fn<T, H: std::hash::Hasher>(T, &mut H) -> ()`.
+/// Basically what this means is the function must look something like the following example.
 ///
 /// ```rust
-/// use hash_with::HashWith;
+/// # use hash_with::HashWith;
 /// # use std::hash::Hash;
-///
+/// #
 /// /// A custom hash function for f64
 /// fn hash_f64_bits<H: std::hash::Hasher>(val: &f64, state: &mut H) {
 ///     val.to_bits().hash(state);
 /// }
 ///
+/// /// An example struct.
 /// #[derive(HashWith)]
 /// struct Config {
 ///     name: String,
-///     /// This field is hashed using the custom function [`hash_f64_bits`].
+///     /// A brightness value which is hashed with [`hash_f64_bits`].
 ///     #[hash_with = "hash_f64_bits"]
 ///     brightness: f64,
 /// }
@@ -164,8 +213,8 @@ use syn::{parse_macro_input, parse_str, Data, DeriveInput, Expr, Fields, Lit, Me
 /// in hashed collections or when you want to ignore volatile or irrelevant data.
 ///
 /// ```rust
-/// use hash_with::HashWith;
-///
+/// # use hash_with::HashWith;
+/// #
 /// #[derive(HashWith)]
 /// struct User {
 ///     id: u32,
@@ -174,21 +223,59 @@ use syn::{parse_macro_input, parse_str, Data, DeriveInput, Expr, Fields, Lit, Me
 ///     session_token: String,
 /// }
 ///
-/// # use std::hash::{Hash, Hasher, DefaultHasher};
-/// # impl User {
-/// #     fn get_hash(&self) -> u64 {
-/// #         let mut hasher = DefaultHasher::new();
-/// #         self.hash(&mut hasher);
-/// #         return hasher.finish();
-/// #     }
-/// # }
-/// #
 /// let user_1 = User { id: 1, session_token: "abc".into() };
 /// let user_2 = User { id: 1, session_token: "xyz".into() };
+/// let user_3 = User { id: 2, session_token: "ijk".into() };
 ///
-/// // The hash ignores `session_token`, so these are equal in terms of hash.
-/// assert_eq!(user_1.get_hash(), user_2.get_hash());
+/// # /// Function for getting the hash of a value which implements hash.
+/// # fn get_hash<T: std::hash::Hash>(value: &T) -> u64 {
+/// #     use std::hash::{Hasher, DefaultHasher};
+/// #     let mut hasher = DefaultHasher::new();
+/// #     value.hash(&mut hasher);
+/// #     return hasher.finish();
+/// # }
+/// #
+/// // The hash ignores [`User::session_token`], so these are equal in terms of hash.
+/// assert_eq!(get_hash(&user_1), get_hash(&user_2));
+/// // The [`User::id`] attribute still gets used
+/// assert_ne!(get_hash(&user_1), get_hash(&user_3));
 /// ```
+///
+/// ## Hash implementation with Block Notation Example
+///
+/// Block notation can also be used to calculate the hash of an attribute. The following is an
+/// example of doing do.
+///
+/// ```rust
+/// # use hash_with::HashWith;
+/// #
+/// #[derive(HashWith)]
+/// struct SomeBadStruct {
+///     #[hash_with({
+///         // Gets intermediary value
+///         let value = self.number.parse::<i32>().unwrap_or(-1);
+///         // Adds 5 to the number
+///         value + 5
+///     })]
+///     number: String,
+/// }
+///
+/// let v1 = SomeBadStruct { number: "number".to_string(), };
+/// let v2 = SomeBadStruct { number: "67".to_string(), };
+///
+/// # /// Function for getting the hash of a value which implements hash.
+/// # fn get_hash<T: std::hash::Hash>(value: &T) -> u64 {
+/// #     use std::hash::{Hasher, DefaultHasher};
+/// #     let mut hasher = DefaultHasher::new();
+/// #     value.hash(&mut hasher);
+/// #     return hasher.finish();
+/// # }
+/// #
+/// // Values aren't equal because the number gets parsed and converted differently.
+/// assert_ne!(get_hash(&v1), get_hash(&v2));
+///
+/// ```
+
 #[proc_macro_derive(HashWith, attributes(hash_with, hash_without))]
 pub fn derive_hash_with(input: TokenStream) -> TokenStream {
 
