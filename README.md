@@ -1,4 +1,6 @@
 # 🦀HashWith🦀
+[![Crates.io](https://img.shields.io/crates/v/hash_with.svg)](https://crates.io/crates/hash_with)
+[![Documentation](https://docs.rs/hash_with/badge.svg)](https://docs.rs/hash_with)
 
 `HashWith` is a Rust procedural macro crate that allows you to automatically implement `Hash` for structs, overriding fields that don’t natively implement `Hash` (like `f64` or structs which use them). It supports custom hash functions per field.
 
