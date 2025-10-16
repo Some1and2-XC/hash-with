@@ -23,6 +23,8 @@ mod tests {
         c: f64,
         #[hash_with(self.d)]
         d: u64,
+        #[hash_without]
+        e: f64,
     }
 
     impl Foo {
@@ -65,6 +67,22 @@ mod tests {
         let foo_3 = Foo::default();
         assert_ne!(foo_1.to_hash(), foo_3.to_hash());
         assert_ne!(foo_2.to_hash(), foo_3.to_hash());
+    }
+
+    #[test]
+    /// Test to ensure that the ignore rule is working.
+    /// This checks `#[hash_without]`.
+    fn check_hash_without() {
+        // Initialization
+        let foo_1 = Foo {
+            e: 1.0,
+            ..Default::default()
+        };
+        let foo_2 = Foo::default();
+        // Compares hash with non-set value
+        // ensures that the values which are different don't change the hash.
+        assert_eq!(foo_1.to_hash(), foo_2.to_hash());
+        assert_ne!(foo_1.e, foo_2.e);
     }
 
 }

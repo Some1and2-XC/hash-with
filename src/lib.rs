@@ -3,7 +3,7 @@ use quote::{quote, ToTokens};
 use syn::{parse_macro_input, parse_str, Data, DeriveInput, Expr, Fields, Lit, Meta, MetaList, MetaNameValue};
 
 /// Method
-#[proc_macro_derive(HashWith, attributes(hash_with))]
+#[proc_macro_derive(HashWith, attributes(hash_with, hash_without))]
 pub fn derive_hash_with(input: TokenStream) -> TokenStream {
 
     let input = parse_macro_input!(input as DeriveInput);
@@ -49,7 +49,7 @@ pub fn derive_hash_with(input: TokenStream) -> TokenStream {
                                     tokens,
                                 .. }
                             ) => {
-                                let expr = parse_str::<Expr>(&tokens.to_string()).expect("Failed to parse thing!").to_token_stream();
+                                let expr = parse_str::<Expr>(&tokens.to_string()).expect("Failed to parse tokens").to_token_stream();
                                 quote! {
                                     #expr.hash(state);
                                 }
@@ -59,6 +59,10 @@ pub fn derive_hash_with(input: TokenStream) -> TokenStream {
 
                         custom_hash_fn = Some(function_name);
 
+                    }
+
+                    if attr.path().is_ident("hash_without") {
+                        custom_hash_fn = Some(proc_macro2::TokenStream::new());
                     }
 
                 }
