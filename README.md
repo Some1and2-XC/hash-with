@@ -21,6 +21,8 @@ use hash_with::HashWith;
 #[derive(HashWith)]
 struct Brightness {
     /// Use a custom hash expression for this field.
+    /// f64::to_bits returns a u64 bit representation
+    /// which implements `Hash`.
     #[hash_with(self.inner.to_bits())]
     inner: f64,
 }
@@ -28,6 +30,8 @@ struct Brightness {
 let b1 = Brightness { inner: 1.1 };
 let b2 = Brightness { inner: 2.2 };
 
+/// Method for getting the result of std::hash::Hash.
+/// Not part of the implementation.
 fn get_hash<T: std::hash::Hash>(value: &T) -> u64 {
     use std::hash::{Hasher, DefaultHasher};
     let mut hasher = DefaultHasher::new();

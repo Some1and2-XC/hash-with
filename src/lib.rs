@@ -17,7 +17,8 @@
 //! #[derive(HashWith)]
 //! struct Brightness {
 //!     /// The inner value with a hash function override.
-//!     /// The `f64::to_bits()` method returns a `u64` which is why it can be used here.
+//!     // The `f64::to_bits()` method returns a `u64` which
+//!     // implements hash.
 //!     #[hash_with(self.inner.to_bits())]
 //!     inner: f64,
 //! }
@@ -52,6 +53,8 @@
 //! #
 //! /// A custom hash function for f64
 //! fn hash_f64_bits<H: std::hash::Hasher>(val: &f64, state: &mut H) {
+//!     // f64::to_bits returns a u64 bit representation
+//!     // which implements `Hash`.
 //!     val.to_bits().hash(state);
 //! }
 //!
@@ -158,7 +161,8 @@ use syn::{parse_macro_input, parse_str, Data, DeriveInput, Expr, Fields, Lit, Me
 /// #[derive(HashWith)]
 /// struct Brightness {
 ///     /// The inner value with a hash function override.
-///     /// The `f64::to_bits()` method returns a `u64` which is why it can be used here.
+///     // The `f64::to_bits()` method returns a `u64` which
+///     // implements hash.
 ///     #[hash_with(self.inner.to_bits())]
 ///     inner: f64,
 /// }
@@ -193,6 +197,8 @@ use syn::{parse_macro_input, parse_str, Data, DeriveInput, Expr, Fields, Lit, Me
 /// #
 /// /// A custom hash function for f64
 /// fn hash_f64_bits<H: std::hash::Hasher>(val: &f64, state: &mut H) {
+///     // f64::to_bits returns a u64 bit representation
+///     // which implements `Hash`.
 ///     val.to_bits().hash(state);
 /// }
 ///
